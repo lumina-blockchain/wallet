@@ -4,8 +4,17 @@ import { Shield, X, Check, Loader2, AlertTriangle, FileCode } from 'lucide-react
 import { motion } from 'framer-motion'
 import { LuminaWallet, LuminaClient, LuminaUtils } from 'lumina-blockchain-sdk'
 
-const RPC_URL = "https://rpc1.bariscode.my.id"
-const client = new LuminaClient(RPC_URL)
+const client = new Proxy({} as any, {
+  get: (_target, prop) => {
+    let url = "https://rpc1.bariscode.my.id";
+    try {
+      url = localStorage.getItem('bigchain_rpc_url') || "https://rpc1.bariscode.my.id";
+    } catch (e) {}
+    const actualClient = new LuminaClient(url);
+    const value = Reflect.get(actualClient, prop);
+    return typeof value === 'function' ? value.bind(actualClient) : value;
+  }
+});
 
 export default function DappPrompt() {
   const { pendingDappRequest, privateKey, address, approveDappRequest, rejectDappRequest } = useWalletStore()
@@ -21,7 +30,7 @@ export default function DappPrompt() {
   // Fetch estimated fee for transactions
   useEffect(() => {
     const fetchFee = async () => {
-      if (method === 'lumina_sendTransaction') {
+      if (method === 'bigchain_sendTransaction') {
         try {
           const data = params.data || [];
           const estFee = await client.estimateFee(data);
@@ -44,7 +53,7 @@ export default function DappPrompt() {
       const wallet = new LuminaWallet(privateKey)
 
       switch (method) {
-        case 'lumina_requestAccounts': {
+        case 'bigchain_requestAccounts': {
           // Save origin to connected list in chrome storage
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             const saved = await chrome.storage.local.get(['connectedOrigins'])
@@ -61,7 +70,7 @@ export default function DappPrompt() {
           break;
         }
 
-        case 'lumina_sendTransaction': {
+        case 'bigchain_sendTransaction': {
           const { to, amount, data } = params
           // Standardize amount: if provided as LUM string or units
           let amountUnits = amount;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useWalletStore } from '../store/useWalletStore'
 import { 
   Wallet, Send, ArrowDownLeft, History, Settings, Copy, RefreshCcw, 
@@ -38,7 +38,7 @@ export default function Dashboard() {
 
   // Load custom RPC on mount
   useEffect(() => {
-    const savedRpc = localStorage.getItem('lumina_rpc_url')
+    const savedRpc = localStorage.getItem('bigchain_rpc_url')
     if (savedRpc) setRpcUrl(savedRpc)
   }, [])
 
@@ -47,16 +47,12 @@ export default function Dashboard() {
     const checkNetwork = async () => {
       try {
         const client = new LuminaClient(rpcUrl)
-        const stats = await client.getNetworkStats()
-        if (stats && stats.total_height !== undefined) {
-          setNetworkHeight(stats.total_height)
+        const latestBlock = await client.getLatestBlock()
+        if (latestBlock && latestBlock.height !== undefined) {
+          setNetworkHeight(latestBlock.height)
           setRpcStatus('online')
         } else {
-          const latestBlock = await client.getLatestBlock()
-          if (latestBlock && latestBlock.height !== undefined) {
-            setNetworkHeight(latestBlock.height)
-            setRpcStatus('online')
-          }
+          setRpcStatus('offline')
         }
       } catch (e) {
         setRpcStatus('offline')
@@ -68,7 +64,10 @@ export default function Dashboard() {
   }, [rpcUrl])
 
   const saveRpcUrl = (newUrl: string) => {
-    localStorage.setItem('lumina_rpc_url', newUrl)
+    localStorage.setItem('bigchain_rpc_url', newUrl)
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.set({ bigchain_rpc_url: newUrl })
+    }
     setRpcUrl(newUrl)
     window.location.reload() // Reload to apply new client instance
   }
@@ -89,7 +88,7 @@ export default function Dashboard() {
   const [importTokenError, setImportTokenError] = useState('')
 
   // Selected Asset state for Send
-  const [selectedAsset, setSelectedAsset] = useState<any>({ symbol: 'LUM', decimals: 18, balance: '0', address: 'native' })
+  const [selectedAsset, setSelectedAsset] = useState<any>({ symbol: 'BIG', decimals: 18, balance: '0', address: 'native' })
   
   // Selected transaction for details modal
   const [selectedTx, setSelectedTx] = useState<any>(null)
@@ -266,7 +265,7 @@ export default function Dashboard() {
       }
     }
 
-    // Standard Lumina Tx
+    // Standard BigChain Tx
     return {
       title: isIncoming ? 'Diterima' : 'Terkirim',
       icon: isIncoming ? ArrowDownLeft : Send,
@@ -306,11 +305,20 @@ export default function Dashboard() {
   // Fetch token list and balances on mount
   useEffect(() => {
     const loadTokens = async () => {
-      const saved = localStorage.getItem(`lumina_tokens_${address}`)
+      const saved = localStorage.getItem(`bigchain_tokens_${address}`)
       let list = saved ? JSON.parse(saved) : []
       
+      // Throttle RPC calls on tab navigation (cache for 10 seconds in sessionStorage)
+      const now = Date.now();
+      const lastFetchTime = sessionStorage.getItem(`bigchain_last_token_fetch_${address}`);
+      if (lastFetchTime && now - parseInt(lastFetchTime) < 10000) {
+        setImportedTokens(list);
+        return;
+      }
+
       // Query balance for each token dynamically using SDK
       if (address) {
+        sessionStorage.setItem(`bigchain_last_token_fetch_${address}`, now.toString());
         const client = new LuminaClient(rpcUrl)
         const updatedList = await Promise.all(list.map(async (tok: any) => {
           let updatedToken = { ...tok };
@@ -351,7 +359,7 @@ export default function Dashboard() {
         }))
         
         // Cache kembali ke localStorage agar tidak perlu request berulang
-        localStorage.setItem(`lumina_tokens_${address}`, JSON.stringify(updatedList))
+        localStorage.setItem(`bigchain_tokens_${address}`, JSON.stringify(updatedList))
         setImportedTokens(updatedList)
       }
     }
@@ -388,7 +396,7 @@ export default function Dashboard() {
 
   const handleImportToken = () => {
     if (!tokenMeta) return
-    const key = `lumina_tokens_${address}`
+    const key = `bigchain_tokens_${address}`
     const saved = localStorage.getItem(key)
     const list = saved ? JSON.parse(saved) : []
     
@@ -408,7 +416,7 @@ export default function Dashboard() {
   }
 
   const handleDeleteToken = (tokenAddr: string) => {
-    const key = `lumina_tokens_${address}`
+    const key = `bigchain_tokens_${address}`
     const saved = localStorage.getItem(key)
     const list = saved ? JSON.parse(saved) : []
     const filtered = list.filter((t: any) => t.address !== tokenAddr)
@@ -423,7 +431,7 @@ export default function Dashboard() {
   const [decryptedKeys, setDecryptedKeys] = useState<{ pk: string, mn: string | null } | null>(null)
 
   const handleExportKeys = () => {
-    const saved = localStorage.getItem('lumina_vault')
+    const saved = localStorage.getItem('bigchain_vault')
     if (!saved) return
     try {
       const vault = JSON.parse(saved)
@@ -519,7 +527,7 @@ export default function Dashboard() {
           <div className="w-7 h-7 bg-cyber-gradient rounded-md flex items-center justify-center shadow-lg shadow-primary/10">
             <Wallet className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="font-bold text-white text-xs tracking-tight uppercase">Lumina</span>
+          <span className="font-bold text-white text-xs tracking-tight uppercase">BigChain</span>
         </div>
         <div className="flex items-center gap-1.5">
           {/* Live Network RPC & Height Status Badge */}
@@ -569,14 +577,14 @@ export default function Dashboard() {
                     <h1 className="text-2xl font-black text-white tracking-tighter">
                       {parseFloat(ethers.formatUnits(balance, 18)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
                     </h1>
-                    <span className="text-primary text-[10px] font-bold tracking-widest uppercase">LUM</span>
+                    <span className="text-primary text-[10px] font-bold tracking-widest uppercase">BIG</span>
                   </div>
                 </div>
                 
                 <div className="flex gap-2">
                   <button 
                     onClick={() => {
-                      setSelectedAsset({ symbol: 'LUM', decimals: 18, balance: ethers.formatUnits(balance, 18), address: 'native' });
+                      setSelectedAsset({ symbol: 'BIG', decimals: 18, balance: ethers.formatUnits(balance, 18), address: 'native' });
                       setShowSend(true);
                     }}
                     className="flex-1 bg-primary text-background py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 hover:brightness-110 transition-all shadow-lg shadow-primary/20"
@@ -599,22 +607,22 @@ export default function Dashboard() {
                 <Coins className="w-2.5 h-2.5 text-primary" /> Aset Portofolio
               </h3>
               <div className="grid grid-cols-1 gap-2">
-                {/* 1. Native LUM Card */}
+                {/* 1. Native BIG Card */}
                 <div className="flex items-center justify-between p-2.5 bg-white/[0.01] border border-white/5 rounded-lg">
                   <div className="flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center shrink-0 border border-white/10 bg-cyber-gradient shadow-md shadow-primary/10">
                       <Wallet className="w-3 h-3 text-white" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-slate-200">Lumina Native Coin</p>
-                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Jaringan Lumina Mainnet</p>
+                      <p className="text-[11px] font-bold text-slate-200">BigChain Native Coin</p>
+                      <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Jaringan BigChain Mainnet</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] font-black text-white">
                       {parseFloat(ethers.formatUnits(balance, 18)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                     </p>
-                    <p className="text-[8px] text-primary font-black uppercase tracking-wider font-mono">LUM</p>
+                    <p className="text-[8px] text-primary font-black uppercase tracking-wider font-mono">BIG</p>
                   </div>
                 </div>
 
@@ -931,7 +939,7 @@ export default function Dashboard() {
             <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="absolute bottom-0 left-0 right-0 bg-[#0a0d14] border-t border-white/10 rounded-t-xl p-6 z-50 shadow-2xl">
               <div className="w-12 h-1 bg-white/10 rounded-full mx-auto mb-6" />
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-sm font-black uppercase tracking-widest text-white italic">Receive LUM</h2>
+                <h2 className="text-sm font-black uppercase tracking-widest text-white italic">Receive BIG</h2>
                 <button onClick={() => setShowReceive(false)} className="p-1 hover:bg-white/5 rounded-lg text-slate-500"><X className="w-4 h-4" /></button>
               </div>
               <div className="flex flex-col items-center space-y-6">
@@ -987,7 +995,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-left">
                         <p className="text-[11px] font-bold text-white tracking-wide leading-tight">
-                          {selectedAsset.address === 'native' ? 'Lumina Native Coin' : selectedAsset.name || 'Custom Token'}
+                          {selectedAsset.address === 'native' ? 'BigChain Native Coin' : selectedAsset.name || 'Custom Token'}
                         </p>
                         <p className="text-[8px] text-primary/80 font-bold uppercase tracking-wider font-mono">{selectedAsset.symbol}</p>
                       </div>
@@ -1013,10 +1021,10 @@ export default function Dashboard() {
                           exit={{ opacity: 0, y: -10 }}
                           className="absolute left-0 right-0 mt-1 bg-[#0f131c] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-40 max-h-48 overflow-y-auto custom-scrollbar"
                         >
-                          {/* Option 1: Native LUM */}
+                          {/* Option 1: Native BIG */}
                           <div 
                             onClick={() => {
-                              setSelectedAsset({ symbol: 'LUM', decimals: 18, balance: ethers.formatUnits(balance, 18), address: 'native' });
+                              setSelectedAsset({ symbol: 'BIG', decimals: 18, balance: ethers.formatUnits(balance, 18), address: 'native' });
                               setIsOpenAssetSelect(false);
                             }}
                             className={cn(
@@ -1029,8 +1037,8 @@ export default function Dashboard() {
                                 <Wallet className="w-3.5 h-3.5 text-white" />
                               </div>
                               <div className="text-left">
-                                <p className="text-[11px] font-bold text-white">Lumina Native Coin</p>
-                                <p className="text-[8px] text-slate-500 font-mono">LUM</p>
+                                <p className="text-[11px] font-bold text-white">BigChain Native Coin</p>
+                                <p className="text-[8px] text-slate-500 font-mono">BIG</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 text-right">
@@ -1038,7 +1046,7 @@ export default function Dashboard() {
                                 <p className="text-[10px] font-black text-white">
                                   {parseFloat(ethers.formatUnits(balance, 18)).toLocaleString('id-ID', { maximumFractionDigits: 4 })}
                                 </p>
-                                <p className="text-[7px] text-primary uppercase font-bold">LUM</p>
+                                <p className="text-[7px] text-primary uppercase font-bold">BIG</p>
                               </div>
                               {selectedAsset.address === 'native' && <Check className="w-3.5 h-3.5 text-[#00ff88]" strokeWidth={3} />}
                             </div>
@@ -1342,3 +1350,4 @@ export default function Dashboard() {
     </div>
   )
 }
+

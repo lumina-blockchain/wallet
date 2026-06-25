@@ -94,7 +94,7 @@ export default function Onboarding() {
               <div className="w-20 h-20 bg-cyber-gradient rounded-[2rem] mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(0,242,255,0.3)]">
                 <Shield className="text-white w-10 h-10" />
               </div>
-              <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white">Lumina</h1>
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white">BigChain</h1>
               <p className="text-[10px] text-slate-500 font-bold tracking-[0.3em] uppercase">Smart Web3 Vault</p>
             </div>
             <div className="space-y-3 pt-6">
@@ -141,7 +141,7 @@ export default function Onboarding() {
               </button>
               <div className="bg-red-500/10 p-3 rounded-xl flex gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-                <p className="text-[9px] text-red-300 font-bold">Never share this. If lost, your LUM is gone.</p>
+                <p className="text-[9px] text-red-300 font-bold">Never share this. If lost, your BIG is gone.</p>
               </div>
             </div>
             <button onClick={startVerification} className="w-full cyber-button py-4 mt-4">I've Saved It</button>
@@ -169,7 +169,7 @@ export default function Onboarding() {
             <div className="w-16 h-16 bg-white/5 border border-white/10 rounded-2xl mx-auto flex items-center justify-center">
               <Lock className="text-primary w-6 h-6" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tighter uppercase italic">Lumina Locked</h2>
+            <h2 className="text-2xl font-bold tracking-tighter uppercase italic">BigChain Locked</h2>
             <div className="space-y-4">
               <input type="password" autoFocus placeholder="Enter Password" className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-center outline-none focus:border-primary" onChange={(e) => { setPassword(e.target.value); setError(''); }} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} />
               {error && <p className="text-[10px] text-red-400 font-bold uppercase">{error}</p>}

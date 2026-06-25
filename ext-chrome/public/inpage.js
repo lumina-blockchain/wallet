@@ -1,13 +1,13 @@
-// Lumina Wallet DApp Provider Injection (inpage.js)
+// BigChain Wallet DApp Provider Injection (inpage.js)
 (() => {
-  if (window.lumina) {
-    console.warn("Lumina Provider already injected.");
+  if (window.bigchain) {
+    console.warn("BigChain Provider already injected.");
     return;
   }
 
-  class LuminaProvider {
+  class BigChainProvider {
     constructor() {
-      this.isLumina = true;
+      this.isBigChain = true;
       this._address = null;
       this._isConnected = false;
       this._listeners = new Map();
@@ -15,13 +15,13 @@
       // Listen to response messages from Content Script
       window.addEventListener('message', (event) => {
         // Only trust messages coming from the content script (our bridge)
-        if (event.source !== window || !event.data || event.data.source !== 'lumina-contentscript') {
+        if (event.source !== window || !event.data || event.data.source !== 'bigchain-contentscript') {
           return;
         }
 
         const { type, payload } = event.data;
 
-        if (type === 'LUMINA_ACCOUNTS_CHANGED') {
+        if (type === 'BIGCHAIN_ACCOUNTS_CHANGED') {
           const oldAddress = this._address;
           this._address = payload.address || null;
           this._isConnected = !!this._address;
@@ -49,7 +49,7 @@
           if (
             event.source === window &&
             event.data &&
-            event.data.source === 'lumina-contentscript' &&
+            event.data.source === 'bigchain-contentscript' &&
             event.data.id === id
           ) {
             window.removeEventListener('message', responseListener);
@@ -57,7 +57,7 @@
             if (event.data.error) {
               reject(new Error(event.data.error));
             } else {
-              if (method === 'lumina_requestAccounts' || method === 'lumina_accounts') {
+              if (method === 'bigchain_requestAccounts' || method === 'bigchain_accounts') {
                 this._address = event.data.result ? event.data.result[0] : null;
                 this._isConnected = !!this._address;
               }
@@ -70,7 +70,7 @@
 
         // Forward request to Content Script
         window.postMessage({
-          source: 'lumina-provider',
+          source: 'bigchain-provider',
           id,
           method,
           params
@@ -104,6 +104,6 @@
     }
   }
 
-  window.lumina = new LuminaProvider();
-  console.log("💎 Lumina Web3 Provider successfully injected.");
+  window.bigchain = new BigChainProvider();
+  console.log("💎 BigChain Web3 Provider successfully injected.");
 })();

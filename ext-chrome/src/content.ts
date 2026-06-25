@@ -1,4 +1,4 @@
-// Lumina Wallet Content Script (content.ts)
+// BigChain Wallet Content Script (content.ts)
 
 // 1. Inject the provider script (inpage.js) into the webpage context
 function injectProvider() {
@@ -9,7 +9,7 @@ function injectProvider() {
     script.onload = () => script.remove();
     container.insertBefore(script, container.firstChild);
   } catch (error) {
-    console.error('Lumina provider injection failed:', error);
+    console.error('BigChain provider injection failed:', error);
   }
 }
 
@@ -18,7 +18,7 @@ injectProvider();
 // 2. Relay messages from webpage (inpage.js) to Extension Background
 window.addEventListener('message', (event) => {
   // Only handle trusted messages coming from our provider
-  if (event.source !== window || !event.data || event.data.source !== 'lumina-provider') {
+  if (event.source !== window || !event.data || event.data.source !== 'bigchain-provider') {
     return;
   }
 
@@ -26,13 +26,13 @@ window.addEventListener('message', (event) => {
 
   // Send request to Background Service Worker
   chrome.runtime.sendMessage({
-    type: 'LUMINA_PROVIDER_REQUEST',
+    type: 'BIGCHAIN_PROVIDER_REQUEST',
     payload: { id, method, params }
   }, (response: any) => {
     // If runtime.lastError occurs, handle it gracefully
     if (chrome.runtime.lastError) {
       window.postMessage({
-        source: 'lumina-contentscript',
+        source: 'bigchain-contentscript',
         id,
         error: chrome.runtime.lastError.message
       }, '*');
@@ -42,7 +42,7 @@ window.addEventListener('message', (event) => {
     // Send response back to webpage context
     if (response) {
       window.postMessage({
-        source: 'lumina-contentscript',
+        source: 'bigchain-contentscript',
         id,
         result: response.result,
         error: response.error
@@ -55,10 +55,10 @@ window.addEventListener('message', (event) => {
 chrome.runtime.onMessage.addListener((message: any) => {
   if (!message || !message.type) return;
 
-  if (message.type === 'LUMINA_BG_ACCOUNTS_CHANGED') {
+  if (message.type === 'BIGCHAIN_BG_ACCOUNTS_CHANGED') {
     window.postMessage({
       source: 'lumina-contentscript',
-      type: 'LUMINA_ACCOUNTS_CHANGED',
+      type: 'BIGCHAIN_ACCOUNTS_CHANGED',
       payload: { address: message.payload.address }
     }, '*');
   }

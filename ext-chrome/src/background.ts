@@ -1,8 +1,24 @@
-// Lumina Wallet Background Script (background.ts)
+// BigChain Wallet Background Script (background.ts)
 import { LuminaClient } from 'lumina-blockchain-sdk'
 
-const RPC_URL = "https://rpc1.bariscode.my.id"
-const client = new LuminaClient(RPC_URL)
+let client = new LuminaClient("https://rpc1.bariscode.my.id");
+
+// Load saved RPC URL asynchronously on background script startup
+chrome.storage.local.get(['bigchain_rpc_url'], (res: any) => {
+  if (res && res.bigchain_rpc_url) {
+    client = new LuminaClient(res.bigchain_rpc_url);
+    console.log("Background initialized with RPC:", res.bigchain_rpc_url);
+  }
+});
+
+// Watch for changes to the RPC URL
+chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
+  if (areaName === 'local' && changes.bigchain_rpc_url) {
+    const newUrl = changes.bigchain_rpc_url.newValue || "https://rpc1.bariscode.my.id";
+    client = new LuminaClient(newUrl);
+    console.log("Background updated to RPC:", newUrl);
+  }
+});
 
 // Connection States (in-memory pending requests)
 const pendingRequests = new Map<string, (response: any) => void>()
@@ -14,14 +30,14 @@ chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: a
   const origin = sender.origin || (sender.tab ? new URL(sender.tab.url || '').origin : null);
 
   // 1. Process dApp Requests (forwarded by Content Script)
-  if (message.type === 'LUMINA_PROVIDER_REQUEST') {
+  if (message.type === 'BIGCHAIN_PROVIDER_REQUEST') {
     const { id, method, params } = message.payload;
     handleProviderRequest(id, method, params, origin, sendResponse);
     return true; // Keep message channel open for async response
   }
 
   // 2. Process User Approvals (sent by React Popup UI)
-  if (message.type === 'LUMINA_APPROVE_REQUEST') {
+  if (message.type === 'BIGCHAIN_APPROVE_REQUEST') {
     const { reqId, result } = message.payload;
     const resolve = pendingRequests.get(reqId);
     if (resolve) {
@@ -32,7 +48,7 @@ chrome.runtime.onMessage.addListener((message: any, sender: any, sendResponse: a
   }
 
   // 3. Process User Rejections (sent by React Popup UI)
-  if (message.type === 'LUMINA_REJECT_REQUEST') {
+  if (message.type === 'BIGCHAIN_REJECT_REQUEST') {
     const { reqId, reason } = message.payload;
     const resolve = pendingRequests.get(reqId);
     if (resolve) {
@@ -52,10 +68,10 @@ async function handleProviderRequest(
 ) {
   try {
     switch (method) {
-      case 'lumina_requestAccounts': {
+      case 'bigchain_requestAccounts': {
         // If already connected, return account immediately
-        const saved = await chrome.storage.local.get(['lumina_vault', 'connectedOrigins']);
-        const vault = saved.lumina_vault;
+        const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
+        const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (origin && connectedList.includes(origin) && vault && vault.address) {
@@ -64,7 +80,7 @@ async function handleProviderRequest(
         }
 
         if (!vault || !vault.address) {
-          sendResponse({ error: "Lumina Wallet is not initialized yet. Please open wallet and create/import an account." });
+          sendResponse({ error: "BigChain Wallet is not initialized yet. Please open wallet and create/import an account." });
           return;
         }
 
@@ -86,9 +102,9 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'lumina_accounts': {
-        const saved = await chrome.storage.local.get(['lumina_vault', 'connectedOrigins']);
-        const vault = saved.lumina_vault;
+      case 'bigchain_accounts': {
+        const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
+        const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (origin && connectedList.includes(origin) && vault && vault.address) {
@@ -99,7 +115,7 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'lumina_getBalance': {
+      case 'bigchain_getBalance': {
         const address = params?.address;
         if (!address) {
           sendResponse({ error: "Missing address parameter" });
@@ -110,21 +126,21 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'lumina_estimateFee': {
+      case 'bigchain_estimateFee': {
         const data = params?.data || [];
         const fee = await client.estimateFee(data);
         sendResponse({ result: fee });
         break;
       }
 
-      case 'lumina_sendTransaction': {
+      case 'bigchain_sendTransaction': {
         // Must be connected first
-        const saved = await chrome.storage.local.get(['lumina_vault', 'connectedOrigins']);
-        const vault = saved.lumina_vault;
+        const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
+        const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (!origin || !connectedList.includes(origin) || !vault || !vault.address) {
-          sendResponse({ error: "Unauthorized. Call lumina_requestAccounts first." });
+          sendResponse({ error: "Unauthorized. Call bigchain_requestAccounts first." });
           return;
         }
 
@@ -145,14 +161,14 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'lumina_signTransaction':
-      case 'lumina_signAsFeePayer': {
-        const saved = await chrome.storage.local.get(['lumina_vault', 'connectedOrigins']);
-        const vault = saved.lumina_vault;
+      case 'bigchain_signTransaction':
+      case 'bigchain_signAsFeePayer': {
+        const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
+        const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (!origin || !connectedList.includes(origin) || !vault || !vault.address) {
-          sendResponse({ error: "Unauthorized. Call lumina_requestAccounts first." });
+          sendResponse({ error: "Unauthorized. Call bigchain_requestAccounts first." });
           return;
         }
 
@@ -187,7 +203,7 @@ async function notifyPendingRequest() {
   // Always set badge as visual indicator
   chrome.action.setBadgeText({ text: '1' });
   chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
-  chrome.action.setTitle({ title: 'Lumina Wallet — Ada permintaan dApp menunggu persetujuan!' });
+  chrome.action.setTitle({ title: 'BigChain Wallet — Ada permintaan dApp menunggu persetujuan!' });
 
   // Try to auto-open the native extension popup (Chrome 127+)
   try {
@@ -203,5 +219,5 @@ async function notifyPendingRequest() {
 // Clear badge when request is resolved
 function clearBadge() {
   chrome.action.setBadgeText({ text: '' });
-  chrome.action.setTitle({ title: 'Lumina Wallet' });
+  chrome.action.setTitle({ title: 'BigChain Wallet' });
 }

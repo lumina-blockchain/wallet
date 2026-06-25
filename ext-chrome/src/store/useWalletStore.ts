@@ -34,7 +34,13 @@ interface WalletState {
   rejectDappRequest: (reqId: string, reason?: string) => Promise<void>
 }
 
-const RPC_URL = "https://rpc1.bariscode.my.id"
+const getRpcUrl = () => {
+  try {
+    return localStorage.getItem('bigchain_rpc_url') || "https://rpc1.bariscode.my.id";
+  } catch (e) {
+    return "https://rpc1.bariscode.my.id";
+  }
+}
 
 export const useWalletStore = create<WalletState>((set, get) => ({
   address: null,
@@ -50,26 +56,26 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
   initialize: async () => {
     try {
-      let saved = localStorage.getItem('lumina_vault')
+      let saved = localStorage.getItem('bigchain_vault')
 
       // Bidirectional storage synchronization (non-blocking callback style)
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         try {
-          chrome.storage.local.get(['lumina_vault'], (res: any) => {
-            if (res && res.lumina_vault) {
+          chrome.storage.local.get(['bigchain_vault'], (res: any) => {
+            if (res && res.bigchain_vault) {
               if (!saved) {
-                saved = JSON.stringify(res.lumina_vault)
-                localStorage.setItem('lumina_vault', saved)
+                saved = JSON.stringify(res.bigchain_vault)
+                localStorage.setItem('bigchain_vault', saved)
                 // If loaded, update zustand state immediately
                 set({ 
-                  address: res.lumina_vault.address, 
+                  address: res.bigchain_vault.address, 
                   hasWallet: true, 
-                  isVerified: res.lumina_vault.isVerified ?? true 
+                  isVerified: res.bigchain_vault.isVerified ?? true 
                 })
               }
             } else if (saved) {
               const data = JSON.parse(saved)
-              chrome.storage.local.set({ lumina_vault: data })
+              chrome.storage.local.set({ bigchain_vault: data })
             }
           })
         } catch (err) {
@@ -79,7 +85,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
       if (saved) {
         const data = JSON.parse(saved)
-        const lastActive = parseInt(localStorage.getItem('lumina_last_active') || "0")
+        const lastActive = parseInt(localStorage.getItem('bigchain_last_active') || "0")
         const now = Date.now()
         if (now - lastActive < 60000) {
           try {
@@ -122,7 +128,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   approveDappRequest: async (reqId: string, result: any) => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.sendMessage({
-        type: 'LUMINA_APPROVE_REQUEST',
+        type: 'BIGCHAIN_APPROVE_REQUEST',
         payload: { reqId, result }
       })
     }
@@ -135,7 +141,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   rejectDappRequest: async (reqId: string, reason: string = "User rejected request") => {
     if (typeof chrome !== 'undefined' && chrome.runtime) {
       chrome.runtime.sendMessage({
-        type: 'LUMINA_REJECT_REQUEST',
+        type: 'BIGCHAIN_REJECT_REQUEST',
         payload: { reqId, reason }
       })
     }
@@ -149,7 +155,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const { address } = get()
     if (!address) return
     try {
-      const client = new LuminaClient(RPC_URL)
+      const client = new LuminaClient(getRpcUrl())
       
       // 1. Fetch Confirmed Txs via SDK
       const confData = await client.getTransactionsByAddress(address, 0, 10)
@@ -171,7 +177,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     const { address } = get()
     if (!address) return
     try {
-      const client = new LuminaClient(RPC_URL)
+      const client = new LuminaClient(getRpcUrl())
       const data = await client.getBalance(address)
       set({ balance: data.balance.toString() })
     } catch (e) { console.error("Fetch Balance Error:", e) }
@@ -191,9 +197,9 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       isVerified: false,
       encryptedData: btoa(JSON.stringify({ pk, mnemonic, pwdCheck: password }))
     }
-    localStorage.setItem('lumina_vault', JSON.stringify(vault))
+    localStorage.setItem('bigchain_vault', JSON.stringify(vault))
     if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-      await chrome.storage.local.set({ lumina_vault: vault })
+      await chrome.storage.local.set({ bigchain_vault: vault })
     }
     set({ address: luminaAddr, mnemonic, privateKey: pk, hasWallet: true, isVerified: false, isLocked: false })
     return mnemonic
@@ -218,37 +224,37 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         isVerified: true,
         encryptedData: btoa(JSON.stringify({ pk, mnemonic: cleanInput.split(" ").length >= 12 ? cleanInput : null, pwdCheck: password }))
       }
-      localStorage.setItem('lumina_vault', JSON.stringify(vault))
+      localStorage.setItem('bigchain_vault', JSON.stringify(vault))
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        await chrome.storage.local.set({ lumina_vault: vault })
+        await chrome.storage.local.set({ bigchain_vault: vault })
       }
       set({ address: luminaAddr, privateKey: pk, hasWallet: true, isVerified: true, isLocked: false })
     } catch (e) { throw new Error("Invalid Mnemonic or Private Key") }
   },
 
   verifyWallet: async () => {
-    const saved = localStorage.getItem('lumina_vault')
+    const saved = localStorage.getItem('bigchain_vault')
     if (saved) {
       const data = JSON.parse(saved)
       data.isVerified = true
-      localStorage.setItem('lumina_vault', JSON.stringify(data))
+      localStorage.setItem('bigchain_vault', JSON.stringify(data))
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        await chrome.storage.local.set({ lumina_vault: data })
+        await chrome.storage.local.set({ bigchain_vault: data })
       }
       set({ isVerified: true })
     }
   },
 
   unlock: async (password: string) => {
-    const saved = localStorage.getItem('lumina_vault')
+    const saved = localStorage.getItem('bigchain_vault')
     if (!saved) return false
     try {
       const vault = JSON.parse(saved)
       const decrypted = JSON.parse(atob(vault.encryptedData))
       if (decrypted.pwdCheck !== password) return false
-      localStorage.setItem('lumina_last_active', Date.now().toString())
+      localStorage.setItem('bigchain_last_active', Date.now().toString())
       if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-        chrome.storage.local.set({ lumina_vault: vault })
+        chrome.storage.local.set({ bigchain_vault: vault })
       }
       set({ address: vault.address, privateKey: decrypted.pk, mnemonic: decrypted.mnemonic, isVerified: vault.isVerified ?? true, isLocked: false })
       await get().fetchPendingDappRequest()
@@ -261,7 +267,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     if (!privateKey || !fromAddr) throw new Error("Wallet locked")
     
     try {
-      const client = new LuminaClient(RPC_URL)
+      const client = new LuminaClient(getRpcUrl())
       const wallet = new LuminaWallet(privateKey)
       
       const amountUnits = LuminaUtils.toUnits(amountLMN).toString()
