@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { ethers } from 'ethers'
 import { LuminaWallet, LuminaClient, LuminaUtils } from 'lumina-blockchain-sdk'
 
@@ -292,3 +292,4 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     set({ address: null, privateKey: null, mnemonic: null, hasWallet: false, isVerified: false, history: [], balance: "0" })
   }
 }))
+

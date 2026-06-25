@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useWalletStore } from '../store/useWalletStore'
 import { Shield, X, Check, Loader2, AlertTriangle, FileCode } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -30,7 +30,7 @@ export default function DappPrompt() {
   // Fetch estimated fee for transactions
   useEffect(() => {
     const fetchFee = async () => {
-      if (method === 'bigchain_sendTransaction') {
+      if (method === 'big_sendTransaction') {
         try {
           const data = params.data || [];
           const estFee = await client.estimateFee(data);
@@ -53,7 +53,7 @@ export default function DappPrompt() {
       const wallet = new LuminaWallet(privateKey)
 
       switch (method) {
-        case 'bigchain_requestAccounts': {
+        case 'big_requestAccounts': {
           // Save origin to connected list in chrome storage
           if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
             const saved = await chrome.storage.local.get(['connectedOrigins'])
@@ -70,7 +70,7 @@ export default function DappPrompt() {
           break;
         }
 
-        case 'bigchain_sendTransaction': {
+        case 'big_sendTransaction': {
           const { to, amount, data } = params
           // Standardize amount: if provided as LUM string or units
           let amountUnits = amount;
@@ -328,3 +328,4 @@ export default function DappPrompt() {
     </div>
   )
 }
+

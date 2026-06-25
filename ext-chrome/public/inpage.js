@@ -1,4 +1,4 @@
-// BigChain Wallet DApp Provider Injection (inpage.js)
+﻿// BigChain Wallet DApp Provider Injection (inpage.js)
 (() => {
   if (window.bigchain) {
     console.warn("BigChain Provider already injected.");
@@ -21,7 +21,7 @@
 
         const { type, payload } = event.data;
 
-        if (type === 'BIGCHAIN_ACCOUNTS_CHANGED') {
+        if (type === 'big_accounts_CHANGED') {
           const oldAddress = this._address;
           this._address = payload.address || null;
           this._isConnected = !!this._address;
@@ -57,7 +57,7 @@
             if (event.data.error) {
               reject(new Error(event.data.error));
             } else {
-              if (method === 'bigchain_requestAccounts' || method === 'bigchain_accounts') {
+              if (method === 'big_requestAccounts' || method === 'big_accounts') {
                 this._address = event.data.result ? event.data.result[0] : null;
                 this._isConnected = !!this._address;
               }
@@ -107,3 +107,4 @@
   window.bigchain = new BigChainProvider();
   console.log("💎 BigChain Web3 Provider successfully injected.");
 })();
+

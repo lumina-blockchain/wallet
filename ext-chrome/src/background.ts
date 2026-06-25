@@ -1,4 +1,4 @@
-// BigChain Wallet Background Script (background.ts)
+﻿// BigChain Wallet Background Script (background.ts)
 import { LuminaClient } from 'lumina-blockchain-sdk'
 
 let client = new LuminaClient("https://rpc1.bariscode.my.id");
@@ -68,7 +68,7 @@ async function handleProviderRequest(
 ) {
   try {
     switch (method) {
-      case 'bigchain_requestAccounts': {
+      case 'big_requestAccounts': {
         // If already connected, return account immediately
         const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
         const vault = saved.bigchain_vault;
@@ -102,7 +102,7 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'bigchain_accounts': {
+      case 'big_accounts': {
         const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
         const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
@@ -115,7 +115,7 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'bigchain_getBalance': {
+      case 'big_getBalance': {
         const address = params?.address;
         if (!address) {
           sendResponse({ error: "Missing address parameter" });
@@ -126,21 +126,21 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'bigchain_estimateFee': {
+      case 'big_estimateFee': {
         const data = params?.data || [];
         const fee = await client.estimateFee(data);
         sendResponse({ result: fee });
         break;
       }
 
-      case 'bigchain_sendTransaction': {
+      case 'big_sendTransaction': {
         // Must be connected first
         const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
         const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (!origin || !connectedList.includes(origin) || !vault || !vault.address) {
-          sendResponse({ error: "Unauthorized. Call bigchain_requestAccounts first." });
+          sendResponse({ error: "Unauthorized. Call big_requestAccounts first." });
           return;
         }
 
@@ -161,14 +161,14 @@ async function handleProviderRequest(
         break;
       }
 
-      case 'bigchain_signTransaction':
-      case 'bigchain_signAsFeePayer': {
+      case 'big_signTransaction':
+      case 'big_signAsFeePayer': {
         const saved = await chrome.storage.local.get(['bigchain_vault', 'connectedOrigins']);
         const vault = saved.bigchain_vault;
         const connectedList = saved.connectedOrigins || [];
 
         if (!origin || !connectedList.includes(origin) || !vault || !vault.address) {
-          sendResponse({ error: "Unauthorized. Call bigchain_requestAccounts first." });
+          sendResponse({ error: "Unauthorized. Call big_requestAccounts first." });
           return;
         }
 
@@ -221,3 +221,4 @@ function clearBadge() {
   chrome.action.setBadgeText({ text: '' });
   chrome.action.setTitle({ title: 'BigChain Wallet' });
 }
+
